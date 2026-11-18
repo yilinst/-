@@ -1,0 +1,42 @@
+#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+    int n, i, j;
+    char gene[50][21];  // n最多50，字符串最长20
+    char temp[21];
+
+    // 输入n
+    scanf("%d", &n);
+    getchar();  // 吸收换行符，防止gets读空
+
+    // 读入n个基因名字符串
+    for(i = 0; i < n; i++)
+    {
+        scanf("%s", gene[i]);
+    }
+
+    // 冒泡排序，strcmp比较
+    for(i = 0; i < n - 1; i++)
+    {
+        for(j = 0; j < n - 1 - i; j++)
+        {
+            // strcmp(a,b) > 0 代表a字典序比b大，需要交换
+            if(strcmp(gene[j], gene[j+1]) > 0)
+            {
+                strcpy(temp, gene[j]);
+                strcpy(gene[j], gene[j+1]);
+                strcpy(gene[j+1], temp);
+            }
+        }
+    }
+
+    // 输出排序后的结果
+    for(i = 0; i < n; i++)
+    {
+        printf("%s\n", gene[i]);
+    }
+
+    return 0;
+}
