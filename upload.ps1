@@ -18,15 +18,13 @@
 $Host.UI.RawUI.WindowTitle = "一键上传到 GitHub"
 $ErrorActionPreference = "Continue"
 
-try {
-    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-    $OutputEncoding = [System.Text.Encoding]::UTF8
-} catch {}
+# 不强制改编码：让 PowerShell 按控制台当前代码页输出，
+# 避免 UTF-8/GBK 冲突导致中文乱码。
 
 $GH_USER = "yilinst"
 
 function Line  { param($t, $c = "Gray")  Write-Host $t -ForegroundColor $c }
-function Step  { param($n, $t)           Write-Host "`n[$n] $t" -ForegroundColor Cyan }
+function Step  { param($n, $t)           Write-Host ""; Write-Host "[$n] $t" -ForegroundColor Cyan }
 function Ok    { param($t)               Write-Host "    v $t" -ForegroundColor Green }
 function Err   { param($t)               Write-Host "    x $t" -ForegroundColor Red }
 function Warn  { param($t)               Write-Host "    ! $t" -ForegroundColor Yellow }
@@ -38,14 +36,47 @@ Line "        一键上传代码到 GitHub" "White"
 Line "============================================" "White"
 
 Set-Location -Path $PSScriptRoot
-Line "`n项目目录: $PWD`n" "DarkGray"
+Write-Host ""
+Line "项目目录: $PWD" "DarkGray"
 
-# ============ 0. 检查 git ============
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Err "找不到 git 命令"
-    Warn "Git 安装在 E:\Git。如果你刚装完 Git，请关掉这个窗口重新双击。"
+# ============ 0. 定位 git ============
+# 不依赖 PATH：双击启动的进程可能继承的是安装 Git 之前的旧环境变量。
+# 这里主动到常见安装位置查找。
+
+$gitExe = $null
+
+# 先看 PATH
+$cmd = Get-Command git -ErrorAction SilentlyContinue
+if ($cmd) {
+    $gitExe = $cmd.Source
+}
+
+# PATH 里没有，就去常见位置找
+if (-not $gitExe) {
+    $candidates = @(
+        "E:\Git\cmd\git.exe",
+        "C:\Program Files\Git\cmd\git.exe",
+        "C:\Program Files (x86)\Git\cmd\git.exe",
+        "$env:LOCALAPPDATA\Programs\Git\cmd\git.exe"
+    )
+    foreach ($c in $candidates) {
+        if (Test-Path $c) { $gitExe = $c; break }
+    }
+}
+
+if (-not $gitExe) {
+    Err "找不到 git"
+    Line ""
+    Line "  请确认 Git 已安装。如果刚装完，请重新启动电脑后再试。" "Yellow"
+    Line "  预期位置: E:\Git\cmd\git.exe" "Gray"
     Pause2
     exit 1
+}
+
+# 把 git 所在目录加到本次会话的 PATH，后续 git 命令都能用
+$gitDir = Split-Path -Parent $gitExe
+if ($env:Path -notlike "*$gitDir*") {
+    $env:Path = "$gitDir;$env:Path"
 }
 
 # ============ 1. 初始化 ============
