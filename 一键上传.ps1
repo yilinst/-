@@ -212,12 +212,22 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# 从远程地址里取出仓库名，避免变量未定义时显示空链接
+$finalUrl = $remote
+if ($finalUrl -match "github\.com[:/]$GH_USER/([^/]+?)(\.git)?$") {
+    $finalUrl = "https://github.com/$GH_USER/" + $Matches[1]
+} elseif ($repo) {
+    $finalUrl = "https://github.com/$GH_USER/$repo"
+} else {
+    $finalUrl = "https://github.com/$GH_USER"
+}
+
 Line ""
 Line "============================================" "Green"
 Line "              上传成功！" "Green"
 Line "============================================" "Green"
 Line ""
-Line "  查看代码: https://github.com/$GH_USER/$repo" "Cyan"
+Line "  查看代码: $finalUrl" "Cyan"
 Line "  个人主页: https://github.com/$GH_USER" "Cyan"
 Line ""
 Pause2 "按回车键退出"
