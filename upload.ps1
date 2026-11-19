@@ -231,14 +231,31 @@ Step "5/5" "上传到 GitHub..."
 $branch = git branch --show-current
 if ([string]::IsNullOrWhiteSpace($branch)) { $branch = "main" }
 
-git push -u origin $branch
+# 网络不稳时自动重试，最多 3 次
+$pushed = $false
+$maxTry = 3
+for ($try = 1; $try -le $maxTry; $try++) {
+    Line "    第 $try/$maxTry 次尝试..." "DarkGray"
+    git push -u origin $branch
+    if ($LASTEXITCODE -eq 0) { $pushed = $true; break }
 
-if ($LASTEXITCODE -ne 0) {
+    if ($try -lt $maxTry) {
+        Warn "本次失败，等 5 秒后自动重试..."
+        Start-Sleep -Seconds 5
+    }
+}
+
+if (-not $pushed) {
     Line ""
-    Err "上传失败。常见原因："
-    Line "    1. 网络波动 -- 等几秒再运行一次即可" "Yellow"
-    Line "    2. SSH 密钥失效 -- 运行 ssh -T git@github.com 检查" "Yellow"
-    Line "    3. 云端有本地没有的提交 -- 先执行 git pull origin $branch --allow-unrelated-histories" "Yellow"
+    Err "上传失败（已重试 $maxTry 次）"
+    Line ""
+    Line "  按可能性从高到低排查：" "White"
+    Line "    1. 网络太慢或抖动严重 -- 换个时间，或用手机热点" "Yellow"
+    Line "    2. 云端有本地没有的提交 -- 运行诊断脚本 check-github.ps1" "Yellow"
+    Line "    3. SSH 密钥失效 -- 终端执行 ssh -T git@github.com 测试" "Yellow"
+    Line "    4. 仓库地址不对 -- 运行 git remote -v 检查" "Yellow"
+    Line ""
+    Line "  你的代码已经安全提交到本地，不会丢失。网络好了重新双击即可。" "Green"
     Pause2
     exit 1
 }
